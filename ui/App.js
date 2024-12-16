@@ -15,6 +15,7 @@ import { Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { BlurView } from 'expo-blur'; // Importer le composant BlurView
+import { WebView} from 'react-native-webview';
 
 
 // Composant principal
@@ -25,7 +26,7 @@ function HomeScreen({ navigation }) {
   const startStream = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://172.20.10.2:5000/start_stream', {
+      const response = await fetch('http://192.168.137.238:4000/start_stream', {
         method: 'POST',
       });
       const result = await response.json();
@@ -45,7 +46,7 @@ function HomeScreen({ navigation }) {
   const stopStream = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://172.20.10.2:5000/stop_stream', {
+      const response = await fetch('http://192.168.137.238:4000/stop_stream', {
         method: 'POST',
       });
       const result = await response.json();
@@ -64,7 +65,7 @@ function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
       <Image source={require('./assets/camera.png')} style={styles.logo} />
         <Text style={styles.title}>Smart Cam</Text>
 
@@ -93,11 +94,11 @@ function HomeScreen({ navigation }) {
 
         {streaming && (
           <WebView
-            source={{ uri: 'http://172.20.10.2:5000/video_feed' }}
+            source={{ uri: 'http://192.168.137.238:4000/video_feed' }}
             style={styles.webview}
           />
         )}
-      </View>
+      </SafeAreaView>
     </SafeAreaView>
   );
 }
@@ -158,7 +159,7 @@ function AddPersonScreen() {
         name: image.split('/').pop(),
       });
 
-      const response = await fetch('http://172.20.10.2:5000/add_person', {
+      const response = await fetch('http://192.168.137.238:4000/add_person', {
         method: 'POST',
         body: formData,
       });
@@ -186,31 +187,31 @@ function AddPersonScreen() {
       >
         <BlurView intensity={10} style={styles.blurView}>
       <Text style={styles.addPersonText}>Add a New Person</Text>
-      <View style={styles.inputContainer}>
+      <SafeAreaView style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           placeholder="Enter name                                                          "
           value={name}
           onChangeText={setName}
         />
-      </View>
+      </SafeAreaView>
 
       {/* Télécharger ou prendre une photo */}
-      <View style={styles.buttonContainer}>
+      <SafeAreaView style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={uploadPicture}>
           <Text style={styles.buttonText}>Upload Picture</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={takePicture}>
           <Text style={styles.buttonText}>Take Picture</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
 
       {/* Afficher l'image sélectionnée */}
       {image && (
-        <View style={styles.imageContainer}>
+        <SafeAreaView style={styles.imageContainer}>
           <Text style={styles.label}>Selected Image:</Text>
           <Image source={{ uri: image }} style={styles.imagePreview} />
-        </View>
+        </SafeAreaView>
       )}
 
       {loading ? (

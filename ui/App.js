@@ -11,13 +11,17 @@ import {
   Image,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as ImagePicker from 'expo-image-picker';  // Importing expo-image-picker
+import * as ImagePicker from 'expo-image-picker';
+import { NavigationContainer,useNavigation } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 
-const App = () => {
+const Stack = createStackNavigator();
+
+const StartStreamScreen = () => {
+  const navigation = useNavigation(); // Access navigation
+
   const [streaming, setStreaming] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [label, setLabel] = useState('');
-  const [image, setImage] = useState(null);
 
   const startStream = async () => {
     setLoading(true);
@@ -59,6 +63,51 @@ const App = () => {
     }
   };
 
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>Streaming App</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={styles.loading} />
+      ) : (
+        <>
+          <View style={styles.buttonContainer}>
+            {!streaming ? (
+              <TouchableOpacity style={styles.button} onPress={startStream}>
+                <Text style={styles.buttonText}>Start Stream</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopStream}>
+                <Text style={styles.buttonText}>Stop Stream</Text>
+              </TouchableOpacity>
+            )}
+                       <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#2196f3' }]}
+            onPress={() => navigation.navigate('AddPerson')}
+          >
+            <Text style={styles.buttonText}>Go to Add Person</Text>
+          </TouchableOpacity>
+          </View>
+          {streaming && (
+        <SafeAreaView style={styles.webViewContainer}>
+              <WebView
+                source={{ uri: 'http://192.168.1.125:4000/video_feed' }}
+                style={styles.webview}
+              />
+      </SafeAreaView>
+          )}
+
+        </>
+        
+      )}
+    </SafeAreaView>
+  );
+};
+
+const AddPersonScreen = () => {
+  const [label, setLabel] = useState('');
+  const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+
   const handleAddPerson = async () => {
     if (!label || !image) {
       Alert.alert('Error', 'Please provide both a label and an image.');
@@ -78,8 +127,6 @@ const App = () => {
       const response = await fetch('http://192.168.1.125:4000/add_face', {
         method: 'POST',
         body: formData,
-        headers: {
-        },
       });
       const result = await response.json();
 
@@ -129,59 +176,48 @@ const App = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Streaming App</Text>
+      <Text style={styles.header}>Add Person</Text>
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" style={styles.loading} />
       ) : (
         <>
-          <View style={styles.buttonContainer}>
-            {!streaming ? (
-              <TouchableOpacity style={styles.button} onPress={startStream}>
-                <Text style={styles.buttonText}>Start Stream</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopStream}>
-                <Text style={styles.buttonText}>Stop Stream</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {streaming && (
-            <View style={styles.webViewContainer}>
-              <WebView
-                source={{ uri: 'http://192.168.1.125:4000/video_feed' }}
-                style={styles.webview}
-              />
-            </View>
-          )}
-          <View style={styles.addPersonContainer}>
-            <Text style={styles.subHeader}>Add Person</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter label"
-              value={label}
-              onChangeText={setLabel}
-            />
-            <View style={styles.imagePickerContainer}>
-              <TouchableOpacity style={styles.imagePickerButton} onPress={openCamera}>
-                <Text style={styles.buttonText}>Take Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.imagePickerButton} onPress={openImageLibrary}>
-                <Text style={styles.buttonText}>Upload Image</Text>
-              </TouchableOpacity>
-            </View>
-            {image && (
-              <Image
-                source={{ uri: image.uri }}
-                style={styles.previewImage}
-              />
-            )}
-            <TouchableOpacity style={styles.button} onPress={handleAddPerson}>
-              <Text style={styles.buttonText}>Submit</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter label"
+            value={label}
+            onChangeText={setLabel}
+          />
+          <View style={styles.imagePickerContainer}>
+            <TouchableOpacity style={styles.imagePickerButton} onPress={openCamera}>
+              <Text style={styles.buttonText}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.imagePickerButton} onPress={openImageLibrary}>
+              <Text style={styles.buttonText}>Upload Image</Text>
             </TouchableOpacity>
           </View>
+          {image && (
+            <Image
+              source={{ uri: image.uri }}
+              style={styles.previewImage}
+            />
+          )}
+          <TouchableOpacity style={styles.button} onPress={handleAddPerson}>
+            <Text style={styles.buttonText}>Submit</Text>
+          </TouchableOpacity>
         </>
       )}
     </SafeAreaView>
+  );
+};
+
+const App = () => {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="StartStream" component={StartStreamScreen} />
+        <Stack.Screen name="AddPerson" component={AddPersonScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
@@ -196,12 +232,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginVertical: 20,
-    color: '#333',
-  },
-  subHeader: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginVertical: 10,
     color: '#333',
   },
   loading: {
@@ -240,11 +270,6 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-  },
-  addPersonContainer: {
-    width: '100%',
-    marginTop: 20,
-    alignItems: 'center',
   },
   input: {
     borderWidth: 1,

@@ -56,7 +56,7 @@ def process_frame(frame):
         face_embedding = embedder.embeddings(np.array([face_resized]))[0]
         label = recognize_face(face_embedding)
         if label == "Unknown" :
-            requests.post('http://192.168.137.81:5000/activate_buzzer')
+            requests.post('http://192.168.137.239:5000/activate_buzzer')
         # Draw bounding box and label
         color = (0, 255, 0) if label != "Unknown" else (0, 0, 255)
         cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
@@ -65,7 +65,7 @@ def process_frame(frame):
     return frame
 
 def generate_stream():
-    video_stream_url = "http://192.168.137.81:5000/video_feed"
+    video_stream_url = "http://192.168.137.239:5000/video_feed"
     cap = cv2.VideoCapture(video_stream_url)
 
     if not cap.isOpened():
@@ -77,10 +77,13 @@ def generate_stream():
         if not ret:
             print("Error: Could not read frame from stream.")
             break
+                # Reduce the resolution of the frame
+        width, height = 320, 240  # Adjust the resolution as needed
+        frame = cv2.resize(frame, (width, height))
         frame = process_frame(frame)
 
         # Encode frame as JPEG
-        _, buffer = cv2.imencode('.jpg', frame)
+        _, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
         frame_bytes = buffer.tobytes()
 
         yield (b'--frame\r\n'
@@ -90,14 +93,14 @@ def generate_stream():
 
 @app.route('/start_stream', methods=['POST'])
 def start_stream():
-    res =  requests.post('http://192.168.137.81:5000/start_stream')
+    res =  requests.post('http://192.168.137.239:5000/start_stream')
     if res.status_code == 200:
         return jsonify({'message': 'Stream started successfully'})
     else:
         return jsonify({'message': 'Failed to start stream'}), res.status_code
 @app.route('/stop_stream', methods=['POST'])
 def stop_stream():
-    res =  requests.post('http://192.168.137.81:5000/stop_stream')
+    res =  requests.post('http://192.168.137.239:5000/stop_stream')
     if res.status_code == 200:
         return jsonify({'message': 'Stream started successfully'})
     else:

@@ -5,6 +5,7 @@ import pickle
 import numpy as np
 from keras_facenet import FaceNet
 import requests
+import threading
 
 # Initialize the Flask app and FaceNet embedder
 app = Flask(__name__)
@@ -33,7 +34,7 @@ def recognize_face(face_embedding):
     
     for name, db_embedding in face_db.items():
         dist = np.linalg.norm(face_embedding - db_embedding)
-        if dist < 0.7 and dist < min_dist:  # Set appropriate distance threshold
+        if dist < 0.9 and dist < min_dist:  # Set appropriate distance threshold
             min_dist = dist
             label = name
     
@@ -54,7 +55,8 @@ def process_frame(frame):
         # Generate embeddings
         face_embedding = embedder.embeddings(np.array([face_resized]))[0]
         label = recognize_face(face_embedding)
-        
+        if label == "Unknown" :
+            requests.post('http://192.168.137.81:5000/activate_buzzer')
         # Draw bounding box and label
         color = (0, 255, 0) if label != "Unknown" else (0, 0, 255)
         cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
@@ -63,7 +65,7 @@ def process_frame(frame):
     return frame
 
 def generate_stream():
-    video_stream_url = "http://192.168.137.137:5000/video_feed"
+    video_stream_url = "http://192.168.137.81:5000/video_feed"
     cap = cv2.VideoCapture(video_stream_url)
 
     if not cap.isOpened():
@@ -88,14 +90,14 @@ def generate_stream():
 
 @app.route('/start_stream', methods=['POST'])
 def start_stream():
-    res =  requests.post('http://192.168.137.137:5000/start_stream')
+    res =  requests.post('http://192.168.137.81:5000/start_stream')
     if res.status_code == 200:
         return jsonify({'message': 'Stream started successfully'})
     else:
         return jsonify({'message': 'Failed to start stream'}), res.status_code
 @app.route('/stop_stream', methods=['POST'])
 def stop_stream():
-    res =  requests.post('http://192.168.137.137:5000/stop_stream')
+    res =  requests.post('http://192.168.137.81:5000/stop_stream')
     if res.status_code == 200:
         return jsonify({'message': 'Stream started successfully'})
     else:

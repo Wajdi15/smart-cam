@@ -35,7 +35,7 @@ def add_face(image_path, label):
     # Extract and compute embeddings for the first detected face
     for (x, y, w, h) in faces:
         face = image_rgb[y:y+h, x:x+w]  # Crop face region
-        cv2.imshow("Cropped Face", face)  # Check the face region
+        # cv2.imshow("Cropped Face", face)  # Check the face region
         face_resized = cv2.resize(face, (160, 160))  # Resize for FaceNet input
         face_embedding = embedder.embeddings(np.array([face_resized]))[0]
 
@@ -59,7 +59,7 @@ def recognize_face(face_embedding):
     for name, db_embedding in face_db.items():
         dist = np.linalg.norm(face_embedding - db_embedding)
         print(f"Comparing with {name}, Distance: {dist}")  # Debugging distance
-        if dist < 0.7 and dist < min_dist:  # Increase threshold to allow larger differences
+        if dist < 0.9 and dist < min_dist:  # Increase threshold to allow larger differences
             min_dist = dist
             label = name
     
@@ -116,7 +116,7 @@ def open_camera():
 if __name__ == "__main__":
     # Add faces to the system
     add_face("amk_wajdi.jpg", "wajdi")
-    add_face("mah.jpg", "mahmoud")
+
 
     # Start webcam recognition
     open_camera()

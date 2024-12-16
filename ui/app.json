@@ -1,10 +1,14 @@
 {
   "expo": {
     "name": "IotUI",
+    "permissions": [
+    "CAMERA",
+    "MEDIA_LIBRARY"
+  ],
     "slug": "IotUI",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/camera.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -12,6 +16,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    
     "ios": {
       "supportsTablet": true
     },
@@ -24,5 +29,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     }
+   
+  
+
+
   }
 }

@@ -3,30 +3,26 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
   Alert,
+  ActivityIndicator,
   SafeAreaView,
+  TouchableOpacity,
   TextInput,
-  ImageBackground 
+  Image,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';  // Importer le bon module pour ImagePicker
-import { Image } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { BlurView } from 'expo-blur'; // Importer le composant BlurView
-import { WebView} from 'react-native-webview';
+import { WebView } from 'react-native-webview';
+import * as ImagePicker from 'expo-image-picker';  // Importing expo-image-picker
 
-
-// Composant principal
-function HomeScreen({ navigation }) {
+const App = () => {
   const [streaming, setStreaming] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [label, setLabel] = useState('');
+  const [image, setImage] = useState(null);
 
   const startStream = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://192.168.137.238:4000/start_stream', {
+      const response = await fetch('http://192.168.1.125:4000/start_stream', {
         method: 'POST',
       });
       const result = await response.json();
@@ -46,7 +42,7 @@ function HomeScreen({ navigation }) {
   const stopStream = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://192.168.137.238:4000/stop_stream', {
+      const response = await fetch('http://192.168.1.125:4000/stop_stream', {
         method: 'POST',
       });
       const result = await response.json();
@@ -63,114 +59,36 @@ function HomeScreen({ navigation }) {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <SafeAreaView style={styles.container}>
-      <Image source={require('./assets/camera.png')} style={styles.logo} />
-        <Text style={styles.title}>Smart Cam</Text>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
-        ) : (
-          <>
-            {!streaming ? (
-              <TouchableOpacity style={styles.startButton} onPress={startStream}>
-                <Text style={styles.buttonText}>Start Stream</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.stopButton} onPress={stopStream}>
-                <Text style={styles.buttonText}>Stop Stream</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={styles.startButton}
-              onPress={() => navigation.navigate('AddPerson')}
-            >
-              <Text style={styles.buttonText}>Add Person</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {streaming && (
-          <WebView
-            source={{ uri: 'http://192.168.137.238:4000/video_feed' }}
-            style={styles.webview}
-          />
-        )}
-      </SafeAreaView>
-    </SafeAreaView>
-  );
-}
-
-// Composant pour la page Ajouter une personne
-function AddPersonScreen() {
-  const [name, setName] = useState('');
-  const [image, setImage] = useState(null); // To store the selected image
-  const [loading, setLoading] = useState(false);
-
-  // Demander la permission pour accéder à la galerie d'images
-  const uploadPicture = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets && result.assets[0].uri) {
-      setImage(result.assets[0].uri);
-    }
-  };
-
-  // Prendre une photo
-  const takePicture = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync(); // Demander la permission pour la caméra
-
-    if (status === 'granted') {
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0].uri) {
-        setImage(result.assets[0].uri);
-      }
-    } else {
-      Alert.alert('Permission Required', 'Camera permission is required to take a photo.');
-    }
-  };
-
-  // Fonction pour gérer la soumission du formulaire
   const handleAddPerson = async () => {
-    if (!name || !image) {
-      Alert.alert('Validation Error', 'Please fill in all fields and upload a picture.');
+    if (!label || !image) {
+      Alert.alert('Error', 'Please provide both a label and an image.');
       return;
     }
 
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('name', name);
-      formData.append('age', '25'); // Remplacer par un âge dynamique
+      formData.append('label', label);
       formData.append('image', {
-        uri: image,
-        type: 'image/jpeg',  // Vous pouvez ajuster le type selon votre image
-        name: image.split('/').pop(),
+        uri: image.uri,
+        type: image.type,
+        name: image.fileName || 'photo.jpg',
       });
 
-      const response = await fetch('http://192.168.137.238:4000/add_person', {
+      const response = await fetch('http://192.168.1.125:4000/add_face', {
         method: 'POST',
         body: formData,
+        headers: {
+        },
       });
       const result = await response.json();
 
       if (response.ok) {
         Alert.alert('Success', 'Person added successfully!');
-        setName('');
-        setImage(null); // Effacer l'image après soumission
+        setLabel('');
+        setImage(null);
       } else {
-        Alert.alert('Error', result.message || 'Failed to add person.');
+        Alert.alert('Error', result.message || 'Failed to add the person');
       }
     } catch (error) {
       Alert.alert('Error', 'Could not connect to the server. Check your internet connection.');
@@ -179,191 +97,180 @@ function AddPersonScreen() {
     }
   };
 
+  const openCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (permission.granted) {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+      if (!result.canceled) {
+        setImage(result.assets[0]);
+      }
+    } else {
+      Alert.alert('Permission Denied', 'Camera permission is required to take a photo.');
+    }
+  };
+
+  const openImageLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.granted) {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+      if (!result.canceled) {
+        setImage(result.assets[0]);
+      }
+    } else {
+      Alert.alert('Permission Denied', 'Gallery permission is required to pick an image.');
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.addPersonContainer}>
-      <ImageBackground
-        source={require('./assets/face.jpg')} // Image de fond
-        style={styles.backgroundImage}
-      >
-        <BlurView intensity={10} style={styles.blurView}>
-      <Text style={styles.addPersonText}>Add a New Person</Text>
-      <SafeAreaView style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter name                                                          "
-          value={name}
-          onChangeText={setName}
-        />
-      </SafeAreaView>
-
-      {/* Télécharger ou prendre une photo */}
-      <SafeAreaView style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={uploadPicture}>
-          <Text style={styles.buttonText}>Upload Picture</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={takePicture}>
-          <Text style={styles.buttonText}>Take Picture</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-
-      {/* Afficher l'image sélectionnée */}
-      {image && (
-        <SafeAreaView style={styles.imageContainer}>
-          <Text style={styles.label}>Selected Image:</Text>
-          <Image source={{ uri: image }} style={styles.imagePreview} />
-        </SafeAreaView>
-      )}
-
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>Streaming App</Text>
       {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#0000ff" style={styles.loading} />
       ) : (
-        <TouchableOpacity style={styles.submitButton} onPress={handleAddPerson}>
-          <Text style={styles.buttonText}>Submit</Text>
-        </TouchableOpacity>
+        <>
+          <View style={styles.buttonContainer}>
+            {!streaming ? (
+              <TouchableOpacity style={styles.button} onPress={startStream}>
+                <Text style={styles.buttonText}>Start Stream</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopStream}>
+                <Text style={styles.buttonText}>Stop Stream</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {streaming && (
+            <View style={styles.webViewContainer}>
+              <WebView
+                source={{ uri: 'http://192.168.1.125:4000/video_feed' }}
+                style={styles.webview}
+              />
+            </View>
+          )}
+          <View style={styles.addPersonContainer}>
+            <Text style={styles.subHeader}>Add Person</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter label"
+              value={label}
+              onChangeText={setLabel}
+            />
+            <View style={styles.imagePickerContainer}>
+              <TouchableOpacity style={styles.imagePickerButton} onPress={openCamera}>
+                <Text style={styles.buttonText}>Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.imagePickerButton} onPress={openImageLibrary}>
+                <Text style={styles.buttonText}>Upload Image</Text>
+              </TouchableOpacity>
+            </View>
+            {image && (
+              <Image
+                source={{ uri: image.uri }}
+                style={styles.previewImage}
+              />
+            )}
+            <TouchableOpacity style={styles.button} onPress={handleAddPerson}>
+              <Text style={styles.buttonText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
-      </BlurView>
-      </ImageBackground>
     </SafeAreaView>
   );
-}
-
-// Configuration du Stack Navigator
-const Stack = createStackNavigator();
-
-export default function App() {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="AddPerson" component={AddPersonScreen} options={{
-          title:"Add Person",
-    headerShown: true, // Si vous voulez afficher l'en-tête
-    headerStyle: {
-      backgroundColor: '#2c2b49', // Rendre l'en-tête transparent
-      elevation: 0, // Supprimer l'ombre de l'en-tête (sur Android)
-      shadowOpacity: 0, // Supprimer l'ombre (sur iOS)
-    },
-    headerTintColor: 'white', // Couleur des éléments du header (par exemple, les icônes)
-    headerTitleStyle: {
-      fontWeight: 'bold', // Personnalisation du titre si nécessaire
-    },
-  }}  />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#CDC1FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: 300, // Adjust size as needed
-    height: 300, // Adjust size as needed
-    marginBottom: -30,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  blurView: {
-    flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fond légèrement transparent
-    borderRadius: 10,
   },
-  title: {
+  header: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8A2BE2',
+    marginVertical: 20,
+    color: '#333',
   },
-  startButton: {
-    backgroundColor: '#8A2BE2',
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    marginTop: 20,
-  },
-  stopButton: {
-    backgroundColor: '#FF6347',
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    marginTop: 20,
-  },
-  addPersonContainer: {
-    flex: 1,
-    backgroundColor: '#CDC1FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  addPersonText: {
+  subHeader: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#8A2BE2',
-    marginBottom: 20,
+    marginVertical: 10,
+    color: '#333',
   },
-  inputContainer: {
-    width: '200%',
-    marginBottom: 15,
+  loading: {
+    marginTop: 50,
   },
-  label: {
+  buttonContainer: {
+    marginVertical: 20,
+    width: '100%',
+    alignItems: 'center',
+  },
+  button: {
+    backgroundColor: '#4caf50',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 5,
+    alignItems: 'center',
+    width: '70%',
+    marginVertical: 10,
+  },
+  stopButton: {
+    backgroundColor: '#f44336',
+  },
+  buttonText: {
+    color: '#ffffff',
     fontSize: 16,
-    color: '#FFF',
-    marginBottom: 5,
+    fontWeight: 'bold',
+  },
+  webViewContainer: {
+    flex: 1,
+    width: '100%',
+    marginTop: 20,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  webview: {
+    flex: 1,
+  },
+  addPersonContainer: {
+    width: '100%',
+    marginTop: 20,
+    alignItems: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#8A2BE2',
-    borderRadius: 10,
+    borderColor: '#ccc',
+    borderRadius: 5,
     padding: 10,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    width: '90%',
+    marginVertical: 10,
   },
-  buttonContainer: {
+  imagePickerContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     width: '100%',
-    marginTop: 20,
+    marginVertical: 10,
   },
-  button: {
-    backgroundColor: '#8A2BE2',
-    paddingVertical: 12,
+  imagePickerButton: {
+    backgroundColor: '#2196f3',
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 30,
-    marginTop: 10,
-    flex: 1,
-    marginHorizontal: 5,
+    borderRadius: 5,
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  imageContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  imagePreview: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  submitButton: {
-    backgroundColor: '#8B5DFF',
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    marginTop: 20,
+  previewImage: {
+    width: 100,
+    height: 100,
+    marginVertical: 10,
   },
 });
+
+export default App;
